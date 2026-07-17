@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P. Pagar — Field File</title>
+<meta name="description" content="Prathamesh Pagar — OSINT Researcher, Red Teamer, Penetration Tester.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=JetBrains+Mono:wght@400;500;700;800&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --kraft: #E4D5B4;
+    --kraft-dark: #C9B385;
+    --kraft-deep: #B39E6E;
+    --paper: #F3EAD3;
+    --paper-white: #FBF6E8;
+    --ink: #26221B;
+    --ink-soft: #4A4130;
+    --redact: #17140F;
+    --stamp-red: #A2323B;
+    --stamp-red-dim: #A2323B99;
+    --string: #A63B3B;
+    --olive: #565C40;
+    --olive-dim: #565C4022;
+    --brass: #A9824F;
+    --shadow: 0 8px 20px -6px rgba(23,20,15,0.35);
+    --focus: 3px solid #2E6E62;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  body{
+    margin:0;
+    background:var(--kraft);
+    color:var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    line-height:1.6;
+    position:relative;
+  }
+
+  /* paper grain overlay */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:9000;
+    opacity:0.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode:multiply;
+  }
+
+  /* aged-paper vignette: darkened, warmed edges like a page held too long */
+  body::after{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:8995;
+    background:
+      radial-gradient(ellipse at center, transparent 45%, rgba(74,54,24,0.16) 100%),
+      radial-gradient(ellipse at 12% 8%, rgba(122,90,40,0.14), transparent 40%),
+      radial-gradient(ellipse at 88% 94%, rgba(122,90,40,0.14), transparent 40%);
+    mix-blend-mode:multiply;
+  }
+
+  /* foxing: faint age-spots scattered across the page, like an old letter */
+  .foxing{
+    position:fixed; inset:0;
+    pointer-events:none;
+    z-index:8990;
+    opacity:0.5;
+    mix-blend-mode:multiply;
+    background-image:
+      radial-gradient(circle, rgba(120,88,42,0.5) 0%, transparent 70%),
+      radial-gradient(circle, rgba(120,88,42,0.4) 0%, transparent 65%),
+      radial-gradient(circle, rgba(120,88,42,0.45) 0%, transparent 70%),
+      radial-gradient(circle, rgba(120,88,42,0.35) 0%, transparent 60%),
+      radial-gradient(circle, rgba(120,88,42,0.4) 0%, transparent 65%),
+      radial-gradient(circle, rgba(120,88,42,0.3) 0%, transparent 70%);
+    background-repeat:no-repeat;
+    background-size:3px 3px, 4px 4px, 2.5px 2.5px, 5px 5px, 3px 3px, 4px 4px;
+    background-position:
+      8% 14%, 22% 63%, 41% 31%, 63% 78%, 77% 22%, 91% 58%;
+  }
+
+  a{color:inherit;}
+  ::selection{ background:var(--stamp-red); color:var(--paper-white); }
+
+  :focus-visible{ outline:var(--focus); outline-offset:3px; }
+
+  h1,h2,h3{ font-family:'Special Elite', monospace; font-weight:400; margin:0; letter-spacing:0.5px; }
+
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:var(--olive);
+    font-weight:700;
+  }
+
+  .stamp{
+    display:inline-block;
+    font-family:'Special Elite', monospace;
+    color:var(--stamp-red);
+    border:3px solid var(--stamp-red);
+    padding:0.15em 0.55em;
+    text-transform:uppercase;
+    letter-spacing:0.15em;
+    transform:rotate(-4deg);
+    border-radius:3px;
+    opacity:0.9;
+    mix-blend-mode:multiply;
+  }
+
+  /* ===== layout shell ===== */
+  .frame{
+    max-width:1180px;
+    margin:0 auto;
+    padding:0 clamp(16px,4vw,56px);
+  }
+
+  /* ===== side tab nav ===== */
+  nav.tabs{
+    position:fixed;
+    top:50%;
+    left:0;
+    transform:translateY(-50%);
+    z-index:500;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  nav.tabs a{
+    writing-mode:vertical-rl;
+    text-orientation:mixed;
+    background:var(--olive);
+    color:var(--paper-white);
+    font-family:'Special Elite', monospace;
+    font-size:0.78rem;
+    letter-spacing:0.15em;
+    text-decoration:none;
+    padding:16px 8px;
+    border-radius:0 6px 6px 0;
+    box-shadow:var(--shadow);
+    border:1px solid var(--redact);
+    border-left:none;
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  nav.tabs a:hover, nav.tabs a:focus-visible{
+    transform:translateX(6px);
+    background:var(--stamp-red);
+  }
+  @media (max-width: 760px){
+    nav.tabs{
+      top:auto; bottom:0; left:0; right:0; transform:none;
+      flex-direction:row;
+      overflow-x:auto;
+      background:var(--redact);
+      justify-content:flex-start;
+    }
+    nav.tabs a{
+      writing-mode:horizontal-tb;
+      border-radius:0;
+      border:none;
+      border-right:1px solid var(--kraft-deep);
+      padding:10px 14px;
+      white-space:nowrap;
+      box-shadow:none;
+    }
+  }
+
+  /* ===== hero / cover sheet ===== */
+  header.cover{
+    padding:clamp(90px,14vh,150px) 0 70px;
+    position:relative;
+    border-bottom:2px dashed var(--kraft-deep);
+    overflow:hidden;
+  }
+  header.cover::before{
+    content:"";
+    position:absolute; inset:0;
+    z-index:0;
+    background:radial-gradient(ellipse 60% 45% at 50% 0%, rgba(255,232,168,0.35), transparent 70%);
+    animation:lampFlicker 6s ease-in-out infinite;
+  }
+  @keyframes lampFlicker{
+    0%,100%{ opacity:1; }
+    38%{ opacity:0.86; }
+    41%{ opacity:1; }
+    62%{ opacity:0.92; }
+    65%{ opacity:1; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    header.cover::before{ animation:none; }
+  }
+  header.cover > .frame{ position:relative; z-index:1; }
+  .clip{
+    position:absolute;
+    top:14px; left:50%;
+    transform:translateX(-50%) rotate(2deg);
+    width:46px; height:78px;
+    z-index:2;
+    transform-origin:50% 8%;
+    animation:clipSway 5s ease-in-out infinite;
+  }
+  .clip svg{ width:100%; height:100%; filter:drop-shadow(0 3px 3px rgba(0,0,0,0.35)); }
+  @keyframes clipSway{
+    0%,100%{ transform:translateX(-50%) rotate(2deg); }
+    50%{ transform:translateX(-50%) rotate(-2.5deg); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .clip{ animation:none; }
+  }
+
+  .file-meta{
+    display:flex; flex-wrap:wrap; gap:10px 28px;
+    font-size:0.75rem;
+    color:var(--ink-soft);
+    margin-bottom:22px;
+    letter-spacing:0.04em;
+  }
+  .file-meta span b{ color:var(--ink); }
+
+  h1.name{
+    font-size:clamp(2.6rem, 7vw, 5rem);
+    line-height:0.98;
+    text-transform:uppercase;
+    color:var(--ink);
+    text-shadow:1px 1px 0 rgba(0,0,0,0.06), 0.5px 0.5px 0.5px rgba(38,34,27,0.5), -0.4px 0 0.6px rgba(38,34,27,0.35);
+  }
+  h1.name .last{ color:var(--stamp-red); }
+
+  .sec-title{
+    text-shadow:0.5px 0.5px 0.6px rgba(38,34,27,0.45), -0.3px 0 0.5px rgba(38,34,27,0.3);
+  }
+
+  .role-typer{
+    margin-top:18px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:clamp(1rem, 2.4vw, 1.35rem);
+    font-weight:700;
+    letter-spacing:0.02em;
+    min-height:1.6em;
+    border-left:3px solid var(--stamp-red);
+    padding-left:12px;
+  }
+  .role-typer .cursor{ animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{opacity:0;} }
+
+  .cover-stamps{ margin-top:34px; display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .cover-stamps .stamp:nth-child(2){ transform:rotate(3deg); border-color:var(--olive); color:var(--olive); }
+
+  /* ===== section shell ===== */
+  section{ padding:78px 0; border-bottom:2px dashed var(--kraft-deep); position:relative; }
+  section:last-of-type{ border-bottom:none; }
+  .sec-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:40px; }
+  .sec-num{ font-family:'Special Elite',monospace; font-size:0.95rem; color:var(--stamp-red); }
+  .sec-title{ font-size:clamp(1.6rem,3.4vw,2.3rem); text-transform:uppercase; }
+  .sec-rule{
+    flex:1; height:9px; align-self:center;
+    background:
+      linear-gradient(135deg, var(--kraft-dark) 25%, transparent 25%) 0 0/9px 9px,
+      linear-gradient(-135deg, var(--kraft-dark) 25%, transparent 25%) 0 0/9px 9px;
+    background-repeat:repeat-x;
+    opacity:0.75;
+  }
+
+  /* ===== profile / redaction ===== */
+  .dossier{
+    background:var(--paper);
+    border:1px solid var(--kraft-deep);
+    box-shadow:var(--shadow);
+    padding:clamp(24px,4vw,44px);
+    max-width:800px;
+    position:relative;
+    font-size:1.02rem;
+  }
+  .dossier::before{
+    content:"";
+    position:absolute; top:0; left:0; right:0; height:6px;
+    background:repeating-linear-gradient(45deg, var(--stamp-red) 0 10px, var(--paper) 10px 20px);
+    opacity:0.5;
+  }
+  .dossier::after{
+    content:"";
+    position:absolute; top:-16px; left:38px;
+    width:84px; height:30px;
+    background:repeating-linear-gradient(115deg, rgba(233,213,158,0.85) 0 4px, rgba(214,190,130,0.85) 4px 8px);
+    border:1px solid rgba(180,155,95,0.5);
+    box-shadow:0 3px 6px rgba(0,0,0,0.25);
+    transform:rotate(-4deg);
+    opacity:0.9;
+  }
+  .dossier strong{ color:var(--stamp-red); }
+
+  /* ===== evidence board ===== */
+  .board-wrap{
+    position:relative;
+    background:
+      radial-gradient(circle at 1px 1px, rgba(0,0,0,0.06) 1px, transparent 0) 0 0/22px 22px,
+      var(--kraft-dark);
+    border:10px solid #7a6640;
+    border-image: linear-gradient(135deg,#8a7550,#5e4d2e) 1;
+    box-shadow:var(--shadow);
+    padding:clamp(20px,4vw,48px);
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='13' cy='13' r='9' fill='none' stroke='%23262218' stroke-width='2.5'/%3E%3Cline x1='20' y1='20' x2='29' y2='29' stroke='%23262218' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E") 13 13, auto;
+  }
+  .board-wrap::before{
+    content:"";
+    position:absolute; z-index:1; pointer-events:none;
+    top:6%; right:6%;
+    width:120px; height:120px;
+    border-radius:50%;
+    border:6px solid rgba(90,58,20,0.16);
+    box-shadow:0 0 0 3px rgba(90,58,20,0.06) inset;
+    transform:rotate(8deg);
+  }
+  .board-wrap::after{
+    content:"";
+    position:absolute; z-index:1; pointer-events:none;
+    bottom:4%; left:8%;
+    width:70px; height:70px;
+    border-radius:50%;
+    border:5px solid rgba(90,58,20,0.14);
+    transform:rotate(-12deg);
+  }
+  #board-svg{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .board-grid{
+    position:relative;
+    z-index:2;
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:34px 26px;
+  }
+  .card{
+    background:var(--paper-white);
+    border:1px solid #d8c79a;
+    padding:16px 14px 14px;
+    box-shadow:0 6px 14px -6px rgba(0,0,0,0.4);
+    position:relative;
+    transform:rotate(var(--r,0deg));
+    transition:transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .card::after{
+    content:"";
+    position:absolute; top:0; right:0;
+    width:0; height:0;
+    border-style:solid;
+    border-width:0 16px 16px 0;
+    border-color:transparent var(--kraft) transparent transparent;
+    filter:drop-shadow(-1px 1px 1px rgba(0,0,0,0.35));
+    transition:border-width 0.25s ease;
+  }
+  .card:hover::after{ border-width:0 24px 24px 0; }
+  .card:hover, .card:focus-within{
+    transform:rotate(0deg) translateY(-6px) scale(1.03);
+    box-shadow:0 16px 26px -10px rgba(0,0,0,0.5);
+    z-index:5;
+  }
+  .card:hover .pin{ box-shadow:0 3px 4px rgba(0,0,0,0.45), 0 0 10px 2px rgba(162,50,59,0.55); }
+  .card:nth-child(3n+1){ --r:-1.6deg; }
+  .card:nth-child(3n+2){ --r:1.1deg; }
+  .card:nth-child(3n){ --r:-0.6deg; }
+  .card .pin{
+    position:absolute; top:-9px; left:50%; transform:translateX(-50%);
+    width:16px; height:16px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #e3bd7a, var(--brass) 60%, #7a5a28);
+    box-shadow:0 3px 4px rgba(0,0,0,0.45);
+  }
+  .card h3{
+    font-family:'Caveat',cursive;
+    font-size:1.3rem;
+    color:var(--stamp-red);
+    margin-bottom:6px;
+    font-weight:700;
+  }
+  .card ul{ margin:0; padding-left:18px; font-size:0.82rem; color:var(--ink-soft); }
+  .card ul li{ margin-bottom:3px; }
+  .card .tag{
+    display:inline-block; margin-top:10px;
+    font-size:0.62rem; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--olive); border:1px solid var(--olive); padding:2px 6px; border-radius:2px;
+  }
+
+  /* ===== operations / case log ===== */
+  .log{ display:flex; flex-direction:column; gap:22px; max-width:900px; }
+  .log-entry{
+    display:grid;
+    grid-template-columns:120px 1fr;
+    gap:22px;
+    background:var(--paper);
+    border-left:4px solid var(--stamp-red);
+    box-shadow:var(--shadow);
+    padding:20px clamp(16px,3vw,28px);
+  }
+  .log-entry .status{
+    font-family:'Special Elite',monospace;
+    font-size:0.72rem;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    align-self:start;
+  }
+  .log-entry .status.active{ color:var(--stamp-red); }
+  .log-entry .status.done{ color:var(--olive); }
+  .log-entry h3{ font-size:1.15rem; margin-bottom:6px; text-transform:uppercase; }
+  .log-entry p, .log-entry ul{ font-size:0.9rem; color:var(--ink-soft); margin:0; }
+  .log-entry ul{ padding-left:20px; margin-top:6px; }
+  .log-entry ul li{ margin-bottom:4px; }
+  @media (max-width:560px){
+    .log-entry{ grid-template-columns:1fr; }
+  }
+
+  /* ===== certifications ===== */
+  .badges{ display:flex; flex-wrap:wrap; gap:20px; }
+  .badge{
+    background:var(--paper-white);
+    border:2px solid var(--olive);
+    border-radius:50%;
+    width:150px; height:150px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    padding:16px;
+    box-shadow:var(--shadow);
+    position:relative;
+    font-size:0.72rem;
+    font-weight:700;
+    letter-spacing:0.02em;
+  }
+  .badge::before{
+    content:"";
+    position:absolute; inset:6px;
+    border:1px dashed var(--olive);
+    border-radius:50%;
+    opacity:0.6;
+  }
+  .badge span{ position:relative; z-index:1; }
+
+  /* ===== contact ===== */
+  .rolodex{
+    display:flex; flex-wrap:wrap; gap:18px;
+  }
+  .rolo-card{
+    background:var(--paper);
+    border:1px solid var(--kraft-deep);
+    box-shadow:var(--shadow);
+    padding:22px 24px;
+    min-width:220px;
+    flex:1 1 220px;
+    text-decoration:none;
+    color:var(--ink);
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+    position:relative;
+  }
+  .rolo-card:hover, .rolo-card:focus-visible{
+    transform:translateY(-4px);
+    box-shadow:0 14px 24px -8px rgba(23,20,15,0.45);
+  }
+  .rolo-card .eyebrow{ display:block; margin-bottom:8px; }
+  .rolo-card .val{ font-family:'Special Elite',monospace; font-size:1.02rem; word-break:break-word; }
+
+  /* ===== signal feed ticker ===== */
+  .feed{
+    background:var(--redact);
+    color:var(--paper-white);
+    padding:16px 0;
+    overflow:hidden;
+    border-top:2px solid var(--stamp-red);
+    border-bottom:2px solid var(--stamp-red);
+    white-space:nowrap;
+    position:relative;
+  }
+  .feed::before, .feed::after{
+    content:""; position:absolute; top:0; bottom:0; width:60px; z-index:2;
+  }
+  .feed::before{ left:0; background:linear-gradient(to right, var(--redact), transparent); }
+  .feed::after{ right:0; background:linear-gradient(to left, var(--redact), transparent); }
+  .feed-track{
+    display:inline-flex;
+    gap:0;
+    animation:ticker 15s linear infinite;
+    will-change:transform;
+  }
+  
+  .feed-track span{
+    font-family:'Special Elite',monospace;
+    font-size:0.85rem;
+    letter-spacing:0.08em;
+    padding:0 28px;
+    border-right:1px solid var(--kraft-deep);
+  }
+  @keyframes ticker{
+    from{ transform:translateX(-100%); }
+    to{ transform:translateX(190%); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .feed-track{ animation:none; }
+  }
+
+  /* ===== scroll reveal (transform handled inline in JS so it never fights
+     card tilt / hover transforms defined elsewhere) ===== */
+  .reveal{ opacity:0; transition:opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.in-view{ opacity:1; }
+  .board-grid .card.reveal{ transition-delay:var(--d,0s); }
+
+  /* ===== stamp drop-in ===== */
+  .stamp.pop{ animation:stampDrop 0.55s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes stampDrop{
+    0%{ opacity:0; transform:rotate(-4deg) scale(2.6); }
+    60%{ opacity:1; }
+    100%{ opacity:0.9; transform:rotate(-4deg) scale(1); }
+  }
+
+  /* ===== cursor spotlight ===== */
+  #spotlight{
+    position:fixed; inset:0; z-index:8000; pointer-events:none;
+    background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%), rgba(255,244,214,0.10), transparent 70%);
+    mix-blend-mode:overlay;
+  }
+  @media (hover:none){ #spotlight{ display:none; } }
+
+  footer{
+    text-align:center;
+    padding:40px 20px 100px;
+    font-size:0.72rem;
+    color:var(--ink-soft);
+    letter-spacing:0.08em;
+  }
+  @media (max-width:760px){ footer{ padding-bottom:70px; } }
+</style>
+</head>
+<body>
+
+<div id="spotlight" aria-hidden="true"></div>
+<div class="foxing" aria-hidden="true"></div>
+
+<nav class="tabs" aria-label="Section navigation">
+  <a href="#profile">Profile</a>
+  <a href="#evidence">Evidence</a>
+  <a href="#operations">Operations</a>
+  <a href="#certs">Certs</a>
+  <a href="#contact">Contact</a>
+</nav>
+
+<header class="cover">
+  <div class="frame">
+    <div class="clip" aria-hidden="true">
+      <svg viewBox="0 0 46 78"><path d="M23 4c9 0 16 7 16 16v34a12 12 0 0 1-24 0V26a7 7 0 0 1 14 0v28a2.5 2.5 0 0 1-5 0V28" fill="none" stroke="#8a8a8a" stroke-width="5" stroke-linecap="round"/></svg>
+    </div>
+
+    <div class="file-meta">
+      <span>FILE&nbsp;NO. <b>OSN-2026-014</b></span>
+      <span>CLASSIFICATION: <b>SUBJECT-DISCLOSED</b></span>
+      <span>STATUS: <b>ACTIVE / OPEN CASE</b></span>
+    </div>
+
+    <h1 class="name">PRATHAMESH<br><span class="last">PAGAR</span></h1>
+
+    <div class="role-typer" id="typer" aria-live="polite"><span class="cursor">|</span></div>
+
+    <div class="cover-stamps">
+      <span class="stamp">Verified</span>
+      <span class="stamp">Clearance: Active</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section id="profile">
+  <div class="frame">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Subject Profile</h2><div class="sec-rule"></div></div>
+
+    <div class="dossier">
+  <p>
+    I'm a <strong>red teamer</strong> with a strong interest in <strong>adversary emulation</strong> and understanding how real-world attackers think and operate. I enjoy approaching security from an offensive perspective and am always looking for opportunities to learn, experiment, and improve.
+  </p>
+
+  <p>
+    <strong>Open-source intelligence (OSINT)</strong> is another area I'm passionate about. I enjoy investigating digital footprints, conducting open-source research, and turning scattered public information into meaningful intelligence.
+  </p>
+
+  <p>
+    I also spend time stress-testing AI systems through jailbreak and prompt-injection research, exploring how models behave under unexpected or adversarial inputs and documenting what I find. Outside of security, networking is something I genuinely enjoy and want to explore further, with the long-term goal of building a strong foundation in network engineering.
+  </p>
+</div>
+  </div>
+</section>
+
+<section id="evidence">
+  <div class="frame">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Evidence Board</h2><div class="sec-rule"></div></div>
+
+    <div class="board-wrap">
+      <svg id="board-svg" aria-hidden="true"></svg>
+      <div class="board-grid" id="board-grid">
+
+        <div class="card" data-pin><span class="pin"></span>
+          <h3>OSINT Tradecraft</h3>
+          <ul>
+            <li>WEBINT &amp; SOCMINT</li>
+            <li>Google dorking</li>
+            <li>WHOIS / IP recon</li>
+            <li>Metadata analysis</li>
+            <li>Digital footprinting</li>
+            <li>Username enumeration</li>
+          </ul>
+          <span class="tag">Recon</span>
+        </div>
+
+        <div class="card" data-pin><span class="pin"></span>
+          <h3>Field Tools</h3>
+          <ul>
+            <li>Sherlock</li>
+            <li>SpiderFoot</li>
+            <li>Shodan</li>
+            <li>theHarvester</li>
+            <li>Exiftool</li>
+          </ul>
+          <span class="tag">Toolkit</span>
+        </div>
+
+        <div class="card" data-pin><span class="pin"></span>
+          <h3>Offensive Security</h3>
+          <ul>
+            <li>Adversary simulation</li>
+            <li>OWASP Top 10</li>
+            <li>Active Directory attacks</li>
+            <li>Network reconnaissance</li>
+            <li>Web app pentesting</li>
+          </ul>
+          <span class="tag">Red Team</span>
+        </div>
+
+        <div class="card" data-pin><span class="pin"></span>
+          <h3>Scripting</h3>
+          <ul>
+            <li>Bash — advanced</li>
+            <li>Python — foundational</li>
+            <li>C — foundational</li>
+          </ul>
+          <span class="tag">Code</span>
+        </div>
+
+        <div class="card" data-pin><span class="pin"></span>
+          <h3>Assessment</h3>
+          <ul>
+            <li>Security assessment</li>
+            <li>SOC fundamentals</li>
+            <li>Report writing</li>
+            <li>Independent research</li>
+          </ul>
+          <span class="tag">Method</span>
+        </div>
+
+        <div class="card" data-pin><span class="pin"></span>
+          <h3>Currently Tracking</h3>
+          <ul>
+            <li>CRTP certification</li>
+            <li>AD attack methodologies</li>
+            <li>AI Red teaming</li>
+            <li>Network Engineering</li>
+          </ul>
+          <span class="tag">Priority</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="operations">
+  <div class="frame">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Field Operations</h2><div class="sec-rule"></div></div>
+
+    <div class="log">
+
+      <div class="log-entry">
+        <div class="status active">Ongoing</div>
+        <div>
+          <h3>Active Directory &amp; Red Team Tradecraft</h3>
+          <p>Preparing for the CRTP certification while studying AD attack methodologies and adversary simulation building toward full red-team engagements rather than single-box exploitation.</p>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="status active">Ongoing</div>
+        <div>
+          <h3>Open Source Toolkit</h3>
+          <p>Building and maintaining a growing public repository of OSINT notes, workflows, and reference material written for reuse in future casework.</p>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="status done">Logged</div>
+        <div>
+          <h3>TryHackMe OSINT &amp; Offensive Security Labs</h3>
+          <p>Completed the Jr. Penetration Tester and Web Fundamentals paths, and dedicated OSINT modules .</p>
+          <ul>
+            <li>Linux, networking, privilege escalation, Active Directory</li>
+            <li>Web application security, OWASP Top 10</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="status done">Logged</div>
+        <div>
+          <h3>Independent OSINT Research</h3>
+          <p>Regular practice in Google dorking, WHOIS lookups, IP reconnaissance, and metadata analysis with Exiftool. Maintains a growing set of OSINT notes and workflows on GitHub.</p>
+        </div>
+      </div>
+
+      <div class="log-entry">
+        <div class="status done">Logged</div>
+        <div>
+          <h3>AI Security Practice Independent Research</h3>
+          <p>Tested AI systems for safety weaknesses and documented observed behaviour. Explored AI jailbreak and prompt injection challenges, including Lakera Gandalf.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="feed" aria-hidden="true">
+  <div class="feed-track">
+    <span>OSINT</span>
+    <span>WEBINT</span>
+    <span>SOCMINT</span>
+    <span>RED TEAMING</span>
+    <span>ADVERSARY SIMULATION</span>
+    <span>PENTESTING</span>
+   </div>
+</div>
+
+<section id="certs">
+  <div class="frame">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Credentials</h2><div class="sec-rule"></div></div>
+
+    <div class="badges">
+      <div class="badge"><span>IBM Cybersecurity Analyst<br>Professional Certificate</span></div>
+      <div class="badge"><span>Cyber Security 101<br>TryHackMe/span></div>
+      <div class="badge"><span>Jr. Penetration Tester<br>TryHackMe</span></div>
+      <div class="badge"><span>Web Fundamentals<br>TryHackMe</span></div>
+      <div class="badge"><span>Advent of Cyber 2025<br>TryHackMe</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="frame">
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Open A Line</h2><div class="sec-rule"></div></div>
+
+    <div class="rolodex">
+      <a class="rolo-card" href="mailto:pagarprathamesh23@gmail.com">
+        <span class="eyebrow">Email</span>
+        <span class="val">pagarprathamesh23@gmail.com</span>
+      </a>
+      <a class="rolo-card" href="https://linkedin.com/in/prathamesh-pagar" target="_blank" rel="noopener">
+        <span class="eyebrow">LinkedIn</span>
+        <span class="val">/in/prathamesh-pagar</span>
+      </a>
+      <a class="rolo-card" href="https://github.com/prathameshpagar" target="_blank" rel="noopener">
+        <span class="eyebrow">GitHub</span>
+        <span class="val">/prathameshpagar</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  FILE OSN-2026-014 — LAST REVIEWED 2026 — END OF RECORD
+</footer>
+
+<script>
+  // typewriter role rotation
+  (function(){
+    const roles = ["OSINT RESEARCHER", "RED TEAMER", "PENETRATION TESTER"];
+    const el = document.getElementById('typer');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduced){
+      el.textContent = roles.join('  ·  ');
+      return;
+    }
+    let r = 0, c = 0, deleting = false;
+    const cursor = '<span class="cursor">|</span>';
+    function tick(){
+      const word = roles[r];
+      if(!deleting){
+        c++;
+        if(c > word.length){ deleting = true; setTimeout(tick, 1400); return; }
+      } else {
+        c--;
+        if(c < 0){ deleting = false; r = (r+1) % roles.length; c = 0; }
+      }
+      el.innerHTML = word.slice(0, Math.max(c,0)) + cursor;
+      setTimeout(tick, deleting ? 40 : 80);
+    }
+    tick();
+  })();
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // cover stamps pop in on load
+  document.querySelectorAll('.cover-stamps .stamp').forEach(function(el, i){
+    if(reduced) return;
+    el.style.opacity = 0;
+    setTimeout(function(){ el.classList.add('pop'); el.style.opacity = ''; }, 900 + i*220);
+  });
+
+  // scroll-reveal for section chrome, cards, log entries, badges, contact cards
+  (function(){
+    const targets = document.querySelectorAll(
+      '.sec-head, .dossier, .card, .log-entry, .badge, .rolo-card'
+    );
+    targets.forEach(function(el){
+      el.classList.add('reveal');
+      el.style.transform = 'translateY(28px)';
+    });
+
+    if(reduced){
+      targets.forEach(function(el){ el.classList.add('in-view'); el.style.transform = ''; });
+      return;
+    }
+
+    // stagger cards on the evidence board
+    document.querySelectorAll('.card').forEach(function(el, i){
+      el.style.transitionDelay = (i * 0.09) + 's';
+    });
+
+    const io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('in-view');
+          entry.target.style.transform = '';
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
+
+    targets.forEach(function(el){ io.observe(el); });
+  })();
+
+  // evidence board string connections, drawn in on scroll
+  (function(){
+    const svg = document.getElementById('board-svg');
+    const wrap = document.querySelector('.board-wrap');
+    const cards = Array.from(document.querySelectorAll('.card[data-pin]'));
+    let drawn = false;
+
+    function build(animate){
+      const wrapRect = wrap.getBoundingClientRect();
+      svg.setAttribute('width', wrapRect.width);
+      svg.setAttribute('height', wrapRect.height);
+      svg.setAttribute('viewBox', '0 0 ' + wrapRect.width + ' ' + wrapRect.height);
+      svg.innerHTML = '';
+      const pts = cards.map(function(c){
+        const r = c.getBoundingClientRect();
+        return { x: r.left - wrapRect.left + r.width/2, y: r.top - wrapRect.top + 8 };
+      });
+      const ns = 'http://www.w3.org/2000/svg';
+      let idx = 0;
+      for(let i=0;i<pts.length;i++){
+        const j = (i+1) % pts.length;
+        if(pts.length > 4 && i % 2 === 1) continue;
+        const line = document.createElementNS(ns,'path');
+        const midX = (pts[i].x + pts[j].x)/2;
+        const midY = Math.max(pts[i].y, pts[j].y) + 40;
+        const d = 'M '+pts[i].x+' '+pts[i].y+' Q '+midX+' '+midY+' '+pts[j].x+' '+pts[j].y;
+        line.setAttribute('d', d);
+        line.setAttribute('stroke', '#A63B3B');
+        line.setAttribute('stroke-width', '1.6');
+        line.setAttribute('fill', 'none');
+        line.setAttribute('opacity', '0.55');
+        svg.appendChild(line);
+        if(animate && !reduced){
+          const len = line.getTotalLength();
+          line.style.strokeDasharray = len;
+          line.style.strokeDashoffset = len;
+          line.style.transition = 'stroke-dashoffset 0.9s ease ' + (idx * 0.12) + 's';
+          requestAnimationFrame(function(){
+            requestAnimationFrame(function(){ line.style.strokeDashoffset = 0; });
+          });
+          idx++;
+        }
+      }
+    }
+
+    window.addEventListener('load', function(){ build(false); });
+    window.addEventListener('resize', function(){ build(false); });
+    setTimeout(function(){ build(false); }, 300);
+
+    const boardIO = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting && !drawn){
+          drawn = true;
+          build(true);
+          boardIO.disconnect();
+        }
+      });
+    }, { threshold: 0.35 });
+    boardIO.observe(wrap);
+  })();
+
+  // cursor spotlight, desk-lamp feel
+  (function(){
+    if(reduced || window.matchMedia('(hover:none)').matches) return;
+    const spot = document.getElementById('spotlight');
+    window.addEventListener('pointermove', function(e){
+      spot.style.setProperty('--mx', e.clientX + 'px');
+      spot.style.setProperty('--my', e.clientY + 'px');
+    });
+  })();
+
+  // gentle parallax on the cover sheet as it scrolls away
+  (function(){
+    if(reduced) return;
+    const cover = document.querySelector('header.cover .frame');
+    if(!cover) return;
+    let ticking = false;
+    function update(){
+      const y = window.scrollY;
+      const fade = Math.max(0, 1 - y / 700);
+      cover.style.transform = 'translateY(' + (y * 0.18) + 'px)';
+      cover.style.opacity = fade.toFixed(3);
+      ticking = false;
+    }
+    window.addEventListener('scroll', function(){
+      if(!ticking){ requestAnimationFrame(update); ticking = true; }
+    }, { passive:true });
+    update();
+  })();
+</script>
+
+</body>
+</html>
